@@ -36,10 +36,16 @@ public class PlayerCameraRotator : MonoBehaviour
 
 	[Header("Smoothing Settings")]
 	[SerializeField]
+	[Tooltip("Enable to smoothen out rotational camera movement")]
 	bool cameraSmoothingEnabled = true;
 	[SerializeField]
+	[Tooltip("!Testing Value!\nNumber of prior frames to store rotation data for, which are averaged to create smooth movement.")]
 	[Range(5, 20)]
 	int smoothingFrames = 20;
+	[SerializeField]
+	[Tooltip("Sets smoothing strength, 0 is no smoothing and 1 is full smoothing.")]
+	[Range(0, 1)]
+	float smoothingStrength = 0.5f;
 
 	//Functionality variables
 	List<float> rotArrayX = new List<float>();
@@ -80,6 +86,9 @@ public class PlayerCameraRotator : MonoBehaviour
 
 			averageRotX /= rotArrayX.Count;
 			averageRotY /= rotArrayY.Count;
+
+			averageRotX = Mathf.Lerp(rotationX, averageRotX, smoothingStrength);
+			averageRotY = Mathf.Lerp(rotationY, averageRotY, smoothingStrength);
 		}
 		else
 		{
@@ -87,7 +96,7 @@ public class PlayerCameraRotator : MonoBehaviour
 			averageRotY = rotationY;
 		}
 
-
+		//Clamp angles between upper/lower values
 		if (rotationClamp == RotationAxis.Cam_X || rotationClamp == RotationAxis.Cam_XY)
 		{
 			averageRotX = ClampAngle(averageRotX, lowerHorizontalClamp, upperHorizontalClamp);
@@ -97,6 +106,7 @@ public class PlayerCameraRotator : MonoBehaviour
 			averageRotY = ClampAngle(averageRotY, lowerVerticalClamp, upperVerticalClamp);
 		}
 
+		//Set quaternion references  
 		xRotation = Quaternion.AngleAxis(averageRotX, Vector3.up);
 		yRotation = Quaternion.AngleAxis(averageRotY, Vector3.left);
 	}
