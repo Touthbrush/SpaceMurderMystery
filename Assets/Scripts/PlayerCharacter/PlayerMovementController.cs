@@ -14,8 +14,6 @@ public class PlayerMovementController : MonoBehaviour
 
 	#region BasePlayerSettings
 	[Header("Movement Settings")]
-	//[SerializeField]
-	//bool canMove = true;
 	[SerializeField]
 	bool enableSprint = true;
 	[SerializeField]
@@ -24,12 +22,21 @@ public class PlayerMovementController : MonoBehaviour
 	[Header("Jump Settings")]
 	[SerializeField]
 	float jumpHeight;
+
+	[Header("Crouch Settings")]
 	[SerializeField]
-	float jumpTime;
+	float crouchedCameraHeight;
+	float standingCameraHeight;
+	[SerializeField]
+	float crouchedColliderHeight;
+	float standingColliderHeight;
 
 	[Header("Movement Speed Settings")]
 	[SerializeField]
 	float baseMovementSpeed = 4;
+	[SerializeField]
+	[Range(0, 1)]
+	float backSpeedMultiplier = 0.5f;
 	[SerializeField]
 	float sprintMovementSpeed = 6;
 	[SerializeField]
@@ -58,18 +65,14 @@ public class PlayerMovementController : MonoBehaviour
 	[Header("Movement Values")]
 	public Vector2 currentVelocity; //implement later
 	public Vector2 targetVelocity; //implement later
-	public float verticalSpeed;
-	public float jumpForce;
+	float verticalSpeed;
+	float jumpForce;
 
-	//Mouse Look
-	[Header("Camera Values")]
-	//public Quaternion charTargetRot;
-	//public Quaternion camTargetRot;
-	public Quaternion origPlayerRot;
-	public Quaternion origCameraRot;
+	Quaternion origPlayerRot;
+	Quaternion origCameraRot;
 
 	//Cursor Lock
-	private bool cursorLocked;
+	bool cursorLocked;
 	#endregion Functionality Variables
 
 	#region Player Initialisation
@@ -78,22 +81,24 @@ public class PlayerMovementController : MonoBehaviour
 		controller = GetComponent<CharacterController>();
 		camRotator = GetComponent<PlayerCameraRotator>();
 
+		if (!playerCam) { Debug.Log("Player camera is missing."); }
+
 		origPlayerRot = transform.localRotation;
-		origCameraRot = (Quaternion)playerCam?.transform.localRotation;
+		origCameraRot = playerCam.transform.localRotation;
+		standingCameraHeight = playerCam.transform.localPosition.y;
+		standingColliderHeight = controller.height;
 
 		jumpForce = Mathf.Sqrt(2 * baseGravity * jumpHeight);
-		
-		if (!playerCam) { Debug.Log("Player camera is missing."); }
-	}
-
-	void Start()
-	{
-		//InitCameraTransforms();
 	}
 	#endregion Player Initialisation
 
 	void Update ()
 	{
+		//Check for status changes
+		isSprinting = UpdatePlayerSprint();
+		isCrouching = UpdatePlayerCrouch();
+
+		//Apply movement and camera updates
 		UpdatePlayerMovement();
 		UpdateCameraRotation();
 	}
@@ -104,9 +109,14 @@ public class PlayerMovementController : MonoBehaviour
 	/// </summary>
 	void UpdatePlayerMovement()
 	{
+		//Get Player Input
 		Vector2 moveInput = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
-		float xMoveSpeed = (moveInput.x * baseMovementSpeed);
-		float zMoveSpeed = (moveInput.y * baseMovementSpeed);
+		isSprinting = canSprint && enableSprint ? Input.GetKey(KeyCode.LeftShift) : false;
+
+		float moveSpeed = GetMovementSpeed(moveInput);
+
+		float xMoveSpeed = (moveInput.x * moveSpeed);
+		float zMoveSpeed = (moveInput.y * moveSpeed);
 		Vector3 velocity = transform.forward * zMoveSpeed + transform.right * xMoveSpeed;
 
 		//Get vertical velocity
@@ -170,6 +180,58 @@ public class PlayerMovementController : MonoBehaviour
 	#endregion Camera Rotation
 
 	#region Helper Methods
+	bool UpdatePlayerSprint()
+	{
+		if (!canSprint || !enableSprint) { return false; }
 
+		return Input.GetKey(KeyCode.LeftShift);
+	}
+
+	bool UpdatePlayerCrouch()
+	{
+		if (!canCrouch || !enableCrouch) { return false; }
+
+		if (!isCrouching && Input.GetKey(KeyCode.LeftControl))
+		{
+			//Switch to crouch stance
+			controller.height = crouchedColliderHeight;
+			controller.center = new Vector3(0, crouchedColliderHeight / 2, 0);
+			playerCam.transform.localPosition = new Vector3(0, crouchedCameraHeight, 0);
+		}
+		else if (isCrouching && !Input.GetKey(KeyCode.LeftControl))
+		{
+			//Switch to stand stance
+			controller.height = standingColliderHeight;
+			controller.center = new Vector3(0, standingColliderHeight / 2, 0);
+			playerCam.transform.localPosition = new Vector3(0, standingCameraHeight, 0);
+		}
+
+		return Input.GetKey(KeyCode.LeftControl);
+	}
+
+	bool CheckStandingSpace()
+	{
+		return true;
+	}
+
+	float GetMovementSpeed(Vector2 input)
+	{
+		if (isCrouching) //Crouched Movement
+		{
+			return crouchMovementSpeed;
+		}
+		else if (input.y > float.Epsilon && isSprinting) //Sprint Forward Movement
+		{
+			return sprintMovementSpeed;
+		}
+		else if (Mathf.Sign(input.y) >= 0) //Forward/Strafe Movement
+		{
+			return baseMovementSpeed;
+		}
+		else //Backward Movement
+		{
+			return baseMovementSpeed * backSpeedMultiplier;
+		}
+	}
 	#endregion Helper Methods
 }

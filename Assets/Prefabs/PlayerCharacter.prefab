@@ -2596,17 +2596,10 @@ MonoBehaviour:
   enableSprint: 1
   enableCrouch: 1
   jumpHeight: 0.5
-  jumpTime: 2
   baseMovementSpeed: 4
+  backSpeedMultiplier: 0.5
   sprintMovementSpeed: 6
   crouchMovementSpeed: 3
-  baseCameraSpeed: 4
-  horCameraSpeed: 1
-  vertCameraSpeed: 1
-  upperCameraClamp: 40
-  lowerCameraClamp: 40
-  cameraSmoothingEnabled: 0
-  cameraSmoothingValue: 1
   baseGravity: 9.5
   canMove: 1
   canCamera: 1
@@ -2833,6 +2826,6 @@ CharacterController:
   m_Radius: 0.4
   m_SlopeLimit: 45
   m_StepOffset: 0.3
-  m_SkinWidth: 0.08
+  m_SkinWidth: 0.005
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0.9, z: 0}
